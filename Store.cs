@@ -34,8 +34,9 @@ public sealed class AppSettings
     /// <summary>Bölmesi olmayan cihazların durduğu "Diğer cihazlar" bölmesinin boyutu.</summary>
     public double OtherWidth { get; set; } = 790;
     public double OtherHeight { get; set; } = 230;
-    /// <summary>"Diğer cihazlar" bölmesinin bölmeler arasındaki sırası.</summary>
-    public int OtherIndex { get; set; }
+    /// <summary>"Diğer cihazlar" bölmesinin yeri; null ise henüz yerleştirilmemiştir.</summary>
+    public double? OtherX { get; set; }
+    public double? OtherY { get; set; }
 }
 
 public sealed class GroupDef
@@ -46,6 +47,9 @@ public sealed class GroupDef
     public string Icon { get; set; } = "Klasor";
     public double Width { get; set; } = 390;
     public double Height { get; set; } = 190;
+    /// <summary>Bölmeler alanındaki yeri; null ise (eski sürüm ya da yeni bölme) kendiliğinden yerleştirilir.</summary>
+    public double? X { get; set; }
+    public double? Y { get; set; }
 }
 
 /// <summary>Cihaz kayıtları: cihazlar ve her istemci IP'sinde en son görülen istemci.</summary>

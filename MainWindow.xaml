@@ -68,7 +68,7 @@
 
         <!-- Alt kısımdaki bölme: başlık (simge, ad, sayı), kutular, sağ altta boyut tutamağı -->
         <DataTemplate x:Key="GroupTemplate">
-            <Border Width="{Binding Width}" Height="{Binding Height}" Margin="0,0,10,10" CornerRadius="8"
+            <Border Width="{Binding Width}" Height="{Binding Height}" CornerRadius="8"
                     HorizontalAlignment="Left" VerticalAlignment="Top"
                     Background="{StaticResource PanelBrush}" AllowDrop="True"
                     DragEnter="Group_DragOver" DragOver="Group_DragOver" DragLeave="Group_DragLeave" Drop="Group_Drop">
@@ -87,7 +87,7 @@
                 <Grid>
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top" Margin="10,6,6,2" Background="Transparent" Cursor="SizeAll"
-                                   ToolTip="Bölmenin yerini değiştirmek için başlıktan tutup sürükleyin"
+                                   ToolTip="Bölmeyi taşımak için başlıktan tutup istediğiniz yere sürükleyin (yanına ya da altına)"
                                    MouseLeftButtonDown="GroupHeader_MouseDown">
                             <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8A9;"
                                     ToolTip="Öteki bölmeleri bu bölmenin boyutuna getir" Click="GroupSameSize_Click"/>
@@ -109,10 +109,6 @@
                             <ItemsControl ItemsSource="{Binding Tiles}" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
                         </ScrollViewer>
                     </DockPanel>
-                    <Rectangle HorizontalAlignment="Left" Width="4" Margin="-8,0,0,0" RadiusX="2" RadiusY="2"
-                               Fill="{StaticResource AccentBrush}" Visibility="{Binding BeforeMark}" IsHitTestVisible="False"/>
-                    <Rectangle HorizontalAlignment="Right" Width="4" Margin="0,0,-8,0" RadiusX="2" RadiusY="2"
-                               Fill="{StaticResource AccentBrush}" Visibility="{Binding AfterMark}" IsHitTestVisible="False"/>
                     <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="16" Height="16" Cursor="SizeNWSE"
                            ToolTip="Boyutu değiştirmek için sürükleyin (20 piksellik ızgaraya oturur)" DragStarted="Group_ResizeStart" DragDelta="Group_Resize" DragCompleted="Group_ResizeDone">
                         <Thumb.Template>
@@ -223,7 +219,9 @@
                 </DockPanel>
                 <ItemsControl x:Name="ClientTilesView" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
                 <DockPanel Margin="3,18,3,4">
-                    <Button DockPanel.Dock="Right" Content="+ Bölme ekle" Click="GroupAdd_Click"
+                    <Button DockPanel.Dock="Right" Content="Otomatik diz" Click="GroupArrange_Click"
+                            ToolTip="Bölmeleri soldan sağa, sığmayanı alta geçirerek boşluksuz dizer"/>
+                    <Button DockPanel.Dock="Right" Content="+ Bölme ekle" Click="GroupAdd_Click" Margin="8,0,0,0"
                             ToolTip="Sunucular, modemler, aralık dışı istemciler gibi cihazları ayırmak için yeni bölme"/>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Diğer cihazlar ve bölmeler" Style="{StaticResource SectionTitle}" Margin="0"/>
@@ -231,8 +229,20 @@
                     </StackPanel>
                 </DockPanel>
                 <WrapPanel x:Name="IconLegend" Margin="3,2,3,8"/>
-                <ItemsControl x:Name="GroupsView" ItemTemplate="{StaticResource GroupTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"
-                              Background="Transparent" AllowDrop="True" DragOver="Groups_DragOver" Drop="Groups_Drop" DragLeave="Groups_DragLeave"/>
+                <ItemsControl x:Name="GroupsView" ItemTemplate="{StaticResource GroupTemplate}" Background="Transparent" Margin="0,0,0,10">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                            <Setter Property="Panel.ZIndex" Value="{Binding Z}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                </ItemsControl>
             </StackPanel>
                 <Canvas IsHitTestVisible="False">
                     <Rectangle x:Name="SelectRect" Visibility="Collapsed" Stroke="#3B82F6" StrokeThickness="1" Fill="#333B82F6"/>

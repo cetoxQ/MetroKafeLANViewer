@@ -46,25 +46,31 @@ public sealed class GroupView : INotifyPropertyChanged
         }
     }
 
-    /// <summary>Bölme sürüklenirken bırakılacağı yer: bu bölmenin önü (-1), arkası (1) ya da hiçbiri (0).</summary>
-    public int InsertSide
+    /// <summary>Bölmeler alanındaki yeri (sol üst köşe, ızgaraya oturur).</summary>
+    public double X
     {
-        get => _side;
-        set
-        {
-            if (_side == value) return;
-            _side = value;
-            Changed(nameof(BeforeMark));
-            Changed(nameof(AfterMark));
-        }
+        get => _x;
+        set { _x = value; Changed(nameof(X)); }
     }
 
-    public Visibility BeforeMark => _side < 0 ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility AfterMark => _side > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public double Y
+    {
+        get => _y;
+        set { _y = value; Changed(nameof(Y)); }
+    }
 
-    double _width, _height;
+    /// <summary>Taşınan bölme ötekilerin üstünde çizilir.</summary>
+    public int Z
+    {
+        get => _z;
+        set { _z = value; Changed(nameof(Z)); }
+    }
+
+    public Rect Bounds => new(X, Y, Width, Height);
+
+    double _width, _height, _x, _y;
     bool _drop;
-    int _side;
+    int _z;
 
     public void RefreshTitle() => Changed(nameof(Title));
 

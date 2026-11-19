@@ -14,14 +14,14 @@ namespace MetroKafeLANViewer;
 public partial class MainWindow
 {
     const string DragFormat = "MetroKafeLANViewer.Cihazlar";
-    const string GroupFormat = "MetroKafeLANViewer.Bolme";
 
     /// <summary>Seçili cihazların anahtarları (aynı cihaz hem istemci ızgarasında hem bölmede görünebilir).</summary>
     readonly HashSet<string> _selected = new(StringComparer.OrdinalIgnoreCase);
     string? _anchorKey;
     (Tile Tile, Point At)? _press;
     Point? _bandStart;
-    (GroupView Group, Point At)? _groupPress;
+    (GroupView Group, Point At, double X, double Y)? _groupPress;
+    bool _groupMoving;
     bool _bandAdditive, _suppressInterval;
     DispatcherTimer? _scaleSave;
 
@@ -105,11 +105,63 @@ public partial class MainWindow
     {
         _groups.Clear();
         // Eski sürümlerde ızgarasız kaydedilmiş boyutlar da ızgaraya oturtulur
+        var other = new GroupView { Width = Snap(_settings.OtherWidth, 230), Height = Snap(_settings.OtherHeight, 110) };
+        bool placed = _settings.OtherX != null;
+        if (placed)
+        {
+            other.X = _settings.OtherX!.Value;
+            other.Y = _settings.OtherY ?? 0;
+        }
+        _groups.Add(other);
+        var fresh = new List<GroupView>();
         foreach (var def in _settings.Groups)
-            _groups.Add(new GroupView { Def = def, Width = Snap(def.Width, 230), Height = Snap(def.Height, 110) });
-        _groups.Insert(Math.Clamp(_settings.OtherIndex, 0, _groups.Count),
-            new GroupView { Width = Snap(_settings.OtherWidth, 230), Height = Snap(_settings.OtherHeight, 110) });
+        {
+            var g = new GroupView { Def = def, Width = Snap(def.Width, 230), Height = Snap(def.Height, 110) };
+            if (def.X is { } x && def.Y is { } y)
+            {
+                g.X = x;
+                g.Y = y;
+            }
+            else fresh.Add(g);
+            _groups.Add(g);
+        }
         FillGroups();
+
+        // Yerleştirme alanın gerçek genişliğini ister; pencere henüz çizilmediyse yüklenince yapılır
+        void Place()
+        {
+            // Yeri kayıtlı olmayanlar: hiçbiri yerleşmemişse (önceki sürümden geçiş) hepsi dizilir, yoksa en alta eklenir
+            bool changed = !placed || fresh.Count > 0;
+            if (!placed) Arrange(_groups);
+            else if (fresh.Count > 0)
+            {
+                double y = _groups.Except(fresh).Select(g => g.Y + g.Height + GroupGap).DefaultIfEmpty(0).Max();
+                Arrange(fresh, y);
+            }
+            // Daha dar bir ekranda sağa taşan bölmeler içeri alınır
+            double width = GroupsAreaWidth();
+            foreach (var g in _groups.Where(g => g.X > 0 && g.X + g.Width > width))
+            {
+                g.X = Math.Max(0, Math.Floor((width - g.Width) / GridStep) * GridStep);
+                changed = true;
+            }
+            if (changed)
+            {
+                Settle(null);
+                SaveGroupPlaces();
+            }
+            UpdateGroupsExtent();
+        }
+        if (GroupsView.IsLoaded) Place();
+        else
+        {
+            void OnLoaded(object s, RoutedEventArgs e)
+            {
+                GroupsView.Loaded -= OnLoaded;
+                Place();
+            }
+            GroupsView.Loaded += OnLoaded;
+        }
     }
 
     /// <summary>
@@ -201,6 +253,7 @@ public partial class MainWindow
         if (GroupOf(sender) is not { } g) return;
         g.Width = Snap(g.Width + e.HorizontalChange, 230);
         g.Height = Snap(g.Height + e.VerticalChange, 110);
+        GroupsView.Height = Math.Max(GroupsView.Height, g.Y + g.Height + 200);
         ShowSizeHint(g);
     }
 
@@ -210,7 +263,9 @@ public partial class MainWindow
         UpdateSelectionText();
         if (GroupOf(sender) is not { } g) return;
         SaveGroupSize(g);
-        Store.SaveSettings(_settings);
+        Settle(g);
+        SaveGroupPlaces();
+        UpdateGroupsExtent();
     }
 
     void ShowSizeHint(GroupView g) =>
@@ -238,7 +293,9 @@ public partial class MainWindow
             if (height) g.Height = src.Height;
             SaveGroupSize(g);
         }
-        Store.SaveSettings(_settings);
+        Settle(src);
+        SaveGroupPlaces();
+        UpdateGroupsExtent();
     }
 
     void GroupSameSize_Click(object sender, RoutedEventArgs e)
@@ -260,86 +317,138 @@ public partial class MainWindow
         menu.IsOpen = true;
     }
 
-    // ---------------------------------------------------------------- bölmelerin yerini değiştirme
+    // ---------------------------------------------------------------- bölmelerin yeri
+
+    static double SnapPos(double v) => Math.Max(0, Math.Round(v / GridStep) * GridStep);
+
+    double GroupsAreaWidth()
+    {
+        double w = GroupsView.ActualWidth;
+        if (w < 100) w = MapPanel.ActualWidth - 30;
+        if (w < 100) w = SystemParameters.WorkArea.Width - 60;
+        return w;
+    }
+
+    /// <summary>Bölmeleri verilen sırayla soldan sağa dizer, satıra sığmayanı alta geçirir.</summary>
+    void Arrange(IEnumerable<GroupView> list, double top = 0)
+    {
+        double width = GroupsAreaWidth(), x = 0, y = top, row = 0;
+        foreach (var g in list)
+        {
+            if (x > 0 && x + g.Width > width)
+            {
+                x = 0;
+                y += row + GroupGap;
+                row = 0;
+            }
+            g.X = x;
+            g.Y = y;
+            x += g.Width + GroupGap;
+            row = Math.Max(row, g.Height);
+        }
+    }
+
+    static bool Overlaps(GroupView a, GroupView b) =>
+        a.X < b.X + b.Width + GroupGap && b.X < a.X + a.Width + GroupGap &&
+        a.Y < b.Y + b.Height + GroupGap && b.Y < a.Y + a.Height + GroupGap;
+
+    /// <summary>
+    /// Üst üste binen bölmeleri ayırır: <paramref name="first"/> yerinde kalır, ötekiler (yukarıdan aşağı, soldan sağa)
+    /// çakıştıkları bölmenin sağına ya da altına, hangisi daha az kaydırıyorsa oraya itilir.
+    /// </summary>
+    void Settle(GroupView? first)
+    {
+        double width = GroupsAreaWidth();
+        var done = new List<GroupView>();
+        if (first != null) done.Add(first);
+        foreach (var g in _groups.Where(g => g != first).OrderBy(g => g.Y).ThenBy(g => g.X))
+        {
+            for (int guard = 0; guard < 500; guard++)
+            {
+                var hit = done.FirstOrDefault(d => Overlaps(g, d));
+                if (hit == null) break;
+                double right = hit.X + hit.Width + GroupGap, down = hit.Y + hit.Height + GroupGap;
+                if (right + g.Width <= width && right - g.X < down - g.Y) g.X = right;
+                else g.Y = down;
+            }
+            done.Add(g);
+        }
+    }
+
+    void SaveGroupPlaces()
+    {
+        foreach (var g in _groups)
+        {
+            if (g.Def is { } def)
+            {
+                def.X = g.X;
+                def.Y = g.Y;
+            }
+            else
+            {
+                _settings.OtherX = g.X;
+                _settings.OtherY = g.Y;
+            }
+        }
+        Store.SaveSettings(_settings);
+    }
+
+    /// <summary>Tuval kendi boyunu bilmez; en alttaki bölmeye göre yükseklik verilir (taşırken aşağıya yer açılır).</summary>
+    void UpdateGroupsExtent()
+    {
+        double bottom = _groups.Select(g => g.Y + g.Height).DefaultIfEmpty(0).Max();
+        GroupsView.Height = bottom + (_groupMoving ? 400 : 0);
+    }
+
+    void GroupArrange_Click(object sender, RoutedEventArgs e)
+    {
+        Arrange([.. _groups.OrderBy(g => g.Y).ThenBy(g => g.X)]);
+        SaveGroupPlaces();
+        UpdateGroupsExtent();
+    }
 
     void GroupHeader_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (IsControl(e.OriginalSource as DependencyObject) || GroupOf(sender) is not { } g) return;
-        _groupPress = (g, e.GetPosition(MapContent));
+        _groupPress = (g, e.GetPosition(GroupsView), g.X, g.Y);
         MapContent.CaptureMouse();
         e.Handled = true;
     }
 
-    void StartGroupDrag(GroupView g)
+    void MoveGroupTo(GroupView g, Point mouse)
     {
-        try
+        if (_groupPress is not { } p) return;
+        if (!_groupMoving)
         {
-            DragDrop.DoDragDrop(MapContent, new DataObject(GroupFormat, g.Id ?? ""), DragDropEffects.Move);
+            if ((mouse - p.At).Length < 6) return;
+            _groupMoving = true;
+            g.Z = 1;
+            GroupsView.Background = (Brush)FindResource("GridBrush");
+            UpdateGroupsExtent();
         }
-        finally
-        {
-            ClearInsertMarks();
-        }
+        double maxX = Math.Max(0, GroupsAreaWidth() - g.Width);
+        g.X = Math.Min(SnapPos(p.X + mouse.X - p.At.X), Math.Floor(maxX / GridStep) * GridStep);
+        g.Y = SnapPos(p.Y + mouse.Y - p.At.Y);
+        SelectionText.Text = $"{g.Name}: konum {g.X:0}, {g.Y:0}";
     }
 
-    void ClearInsertMarks()
+    void EndGroupMove()
     {
-        foreach (var g in _groups)
-        {
-            g.InsertSide = 0;
-            g.DropTarget = false;
-        }
-    }
-
-    GroupView? DraggedGroup(DragEventArgs e) =>
-        e.Data.GetData(GroupFormat) is string id ? _groups.FirstOrDefault(g => (g.Id ?? "") == id) : null;
-
-    /// <summary>Fare bölmenin sol yarısındaysa önüne (-1), sağ yarısındaysa arkasına (1).</summary>
-    static int SideOf(DragEventArgs e, object sender) =>
-        sender is FrameworkElement fe && e.GetPosition(fe).X < fe.ActualWidth / 2 ? -1 : 1;
-
-    void MoveGroup(GroupView g, int index)
-    {
-        int from = _groups.IndexOf(g);
-        if (from < index) index--;
-        index = Math.Clamp(index, 0, _groups.Count - 1);
-        if (from == index) return;
-        _groups.Move(from, index);
-        _settings.Groups = [.. _groups.Where(x => x.Def != null).Select(x => x.Def!)];
-        _settings.OtherIndex = _groups.IndexOf(_groups.First(x => x.Def == null));
-        Store.SaveSettings(_settings);
-    }
-
-    // Bölmelerin dışındaki boş yere bırakılırsa en sona taşınır
-    void Groups_DragOver(object sender, DragEventArgs e)
-    {
-        if (DraggedGroup(e) is null) return;
-        e.Effects = DragDropEffects.Move;
-        ClearInsertMarks();
-        if (_groups.Count > 0) _groups[^1].InsertSide = 1;
-        e.Handled = true;
-    }
-
-    void Groups_DragLeave(object sender, DragEventArgs e) => ClearInsertMarks();
-
-    void Groups_Drop(object sender, DragEventArgs e)
-    {
-        ClearInsertMarks();
-        if (DraggedGroup(e) is not { } g) return;
-        MoveGroup(g, _groups.Count);
-        e.Handled = true;
+        if (_groupPress is not { } p) return;
+        _groupPress = null;
+        MapContent.ReleaseMouseCapture();
+        if (!_groupMoving) return;
+        _groupMoving = false;
+        p.Group.Z = 0;
+        GroupsView.Background = Brushes.Transparent;
+        Settle(p.Group);
+        SaveGroupPlaces();
+        UpdateGroupsExtent();
+        UpdateSelectionText();
     }
 
     void Group_DragOver(object sender, DragEventArgs e)
     {
-        if (DraggedGroup(e) is { } dragged)
-        {
-            e.Effects = DragDropEffects.Move;
-            ClearInsertMarks();
-            if (GroupOf(sender) is { } over && over != dragged) over.InsertSide = SideOf(e, sender);
-            e.Handled = true;
-            return;
-        }
         bool ok = e.Data.GetDataPresent(DragFormat);
         e.Effects = ok ? DragDropEffects.Move : DragDropEffects.None;
         if (ok && GroupOf(sender) is { } g)
@@ -351,21 +460,12 @@ public partial class MainWindow
 
     void Group_DragLeave(object sender, DragEventArgs e)
     {
-        if (GroupOf(sender) is not { } g) return;
-        g.DropTarget = false;
-        g.InsertSide = 0;
+        if (GroupOf(sender) is { } g) g.DropTarget = false;
     }
 
     void Group_Drop(object sender, DragEventArgs e)
     {
-        ClearInsertMarks();
-        if (DraggedGroup(e) is { } dragged)
-        {
-            if (GroupOf(sender) is { } over && over != dragged)
-                MoveGroup(dragged, _groups.IndexOf(over) + (SideOf(e, sender) > 0 ? 1 : 0));
-            e.Handled = true;
-            return;
-        }
+        foreach (var g in _groups) g.DropTarget = false;
         if (GroupOf(sender) is not { } target || e.Data.GetData(DragFormat) is not string[] keys) return;
         var set = keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         MoveToGroup(_monitor.Devices.Where(d => set.Contains(d.Key)).ToList(), target.Id);
@@ -529,16 +629,8 @@ public partial class MainWindow
         var pos = e.GetPosition(MapContent);
         if (_groupPress is { } gp)
         {
-            if (e.LeftButton != MouseButtonState.Pressed)
-            {
-                _groupPress = null;
-                MapContent.ReleaseMouseCapture();
-                return;
-            }
-            if ((pos - gp.At).Length < 6) return;
-            _groupPress = null;
-            MapContent.ReleaseMouseCapture();
-            StartGroupDrag(gp.Group);
+            if (e.LeftButton != MouseButtonState.Pressed) EndGroupMove();
+            else MoveGroupTo(gp.Group, e.GetPosition(GroupsView));
             return;
         }
         if (_press is { } p)
@@ -569,8 +661,7 @@ public partial class MainWindow
     {
         if (_groupPress != null)
         {
-            _groupPress = null;
-            MapContent.ReleaseMouseCapture();
+            EndGroupMove();
             return;
         }
         if (_press is { } p)
@@ -644,11 +735,14 @@ public partial class MainWindow
     public void DebugGridAndEqualize()
     {
         GroupsView.Background = (Brush)FindResource("GridBrush");
-        if (_groups.Count > 1)
-            foreach (var g in _groups.Skip(2)) { g.Width = _groups[1].Width; g.Height = _groups[1].Height; }
-        // Diğer cihazlar en sona alınır (kaydedilir), ilk bölmede "önüne bırak" işareti gösterilir
-        MoveGroup(_groups.First(g => g.Def == null), _groups.Count);
-        _groups[0].InsertSide = 1;
+        // Fareyle taşımanın aynısı: son bölmeyi başlığından tutup Diğer cihazlar'ın hemen altına bırak
+        var last = _groups[^1];
+        var other = _groups[0];
+        var at = new Point(last.X + 40, last.Y + 10);
+        _groupPress = (last, at, last.X, last.Y);
+        MoveGroupTo(last, at + new Vector(-last.X + other.X + 3, -last.Y + other.Y + other.Height + GroupGap + 4));
+        EndGroupMove();
+        GroupsView.Background = (Brush)FindResource("GridBrush");
     }
 
     /// <summary>Yalnızca Debug: ekran görüntüsü testinde seçim görünümü için.</summary>
