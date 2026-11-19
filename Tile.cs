@@ -19,6 +19,19 @@ public sealed class Tile : INotifyPropertyChanged
     /// <summary>Tür simgesi; boş IP'de yok.</summary>
     public Geometry? Icon { get; private set; }
     public Brush IconBrush { get; private set; } = Muted;
+    /// <summary>Çoklu seçimde seçili mi (beyaz kenar).</summary>
+    public bool Selected
+    {
+        get => _selected;
+        set
+        {
+            if (_selected == value) return;
+            _selected = value;
+            PropertyChanged?.Invoke(this, new(nameof(Selected)));
+        }
+    }
+    bool _selected;
+
     public System.Windows.Visibility IconVisibility => Icon == null ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
 
     static readonly System.Globalization.CultureInfo Tr = new("tr-TR");
@@ -44,12 +57,15 @@ public sealed class Tile : INotifyPropertyChanged
         if (d == null || !d.Online)
         {
             // Boş IP: burada en son görülen istemcinin adı soluk yazılır
-            Label = owner?.DisplayName ?? "";
+            Label = owner?.DisplayName ?? (d != null ? ShortName(d) : "");
             Fill = d == null ? Empty : OfflineFill;
             Edge = d == null ? EmptyEdge : OfflineEdge;
             NumberBrush = Muted;
-            Icon = null;
-            Tip = owner != null ? $"{ip} — boş\nEn son: {owner.DisplayName} ({owner.LastSeen:dd.MM HH:mm})" : $"{ip} — boş";
+            // Bölmedeki kapalı cihaz: simgesi soluk görünür
+            Icon = d != null ? Icons.Of(d.Kind) : null;
+            IconBrush = Muted;
+            Tip = d != null ? $"{ip} — kapalı\n{Monitor.Describe(d)}\nSon görülme: {d.LastSeen:dd.MM HH:mm}"
+                : owner != null ? $"{ip} — boş\nEn son: {owner.DisplayName} ({owner.LastSeen:dd.MM HH:mm})" : $"{ip} — boş";
         }
         else
         {

@@ -51,6 +51,10 @@ public partial class SettingsWindow : Window
             Repo = _old.Repo,
             Token = _old.Token,
             Tab = _old.Tab,
+            TileScale = _old.TileScale,
+            Groups = _old.Groups,
+            OtherWidth = _old.OtherWidth,
+            OtherHeight = _old.OtherHeight,
         };
         string? error = null;
         if (!IpRange.TryParse(s.ScanRanges, out _, out var e1)) error = "Tarama aralığı: " + e1;

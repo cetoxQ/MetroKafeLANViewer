@@ -54,6 +54,40 @@ public static class Icons
 
     static readonly Geometry Unknown = G("M12,2 A10,10 0 1 1 11.99,2 Z M9.1,9 A3,3 0 0 1 14.9,10 C14.9,12 12,12.5 12,14 M12,17.5 H12.01");
 
+    static readonly Geometry Server = G("M4,3 H20 A1,1 0 0 1 21,4 V9 A1,1 0 0 1 20,10 H4 A1,1 0 0 1 3,9 V4 A1,1 0 0 1 4,3 Z "
+        + "M4,14 H20 A1,1 0 0 1 21,15 V20 A1,1 0 0 1 20,21 H4 A1,1 0 0 1 3,20 V15 A1,1 0 0 1 4,14 Z M7,6.5 H7.01 M7,17.5 H7.01 M11,6.5 H17 M11,17.5 H17");
+    static readonly Geometry Folder = G("M3,6 A1,1 0 0 1 4,5 H9 L11,7 H20 A1,1 0 0 1 21,8 V18 A1,1 0 0 1 20,19 H4 A1,1 0 0 1 3,18 Z");
+    static readonly Geometry Star = G("M12,3 L14.6,8.6 L20.6,9.2 L16,13.3 L17.4,19.2 L12,16.1 L6.6,19.2 L8,13.3 L3.4,9.2 L9.4,8.6 Z");
+    static readonly Geometry Warning = G("M12,3 L22,20 H2 Z M12,9.5 V14 M12,17 H12.01");
+
+    /// <summary>Bölme simgeleri: cihaz türleri + sunucu, klasör, yıldız, uyarı.</summary>
+    public static readonly (string Key, string Text)[] GroupIcons =
+    [
+        ("Sunucu", "Sunucu"), ("Istemci", "İstemci"), ("Bilgisayar", "Bilgisayar"), ("Kamera", "Kamera"), ("Modem", "Modem"),
+        ("Router", "Wi-Fi router"), ("AgCihazi", "Switch / AP"), ("Mobil", "Telefon"), ("Yazici", "Yazıcı"), ("Klasor", "Klasör"),
+        ("Yildiz", "Yıldız"), ("Uyari", "Uyarı"), ("Bilinmiyor", "Bilinmiyor"),
+    ];
+
+    public static Geometry ByKey(string? key) => key switch
+    {
+        "Sunucu" => Server,
+        "Klasor" => Folder,
+        "Yildiz" => Star,
+        "Uyari" => Warning,
+        _ => Enum.TryParse<DeviceKind>(key, out var k) ? Of(k) : Folder,
+    };
+
+    static readonly Brush ServerBrush = B("#38BDF8"), FolderBrush = B("#CBD5E1"), StarBrush = B("#FACC15"), WarnBrush = B("#F87171");
+
+    public static Brush BrushByKey(string? key) => key switch
+    {
+        "Sunucu" => ServerBrush,
+        "Klasor" => FolderBrush,
+        "Yildiz" => StarBrush,
+        "Uyari" => WarnBrush,
+        _ => Enum.TryParse<DeviceKind>(key, out var k) ? BrushOf(k) : FolderBrush,
+    };
+
     public static Geometry Of(DeviceKind k) => k switch
     {
         DeviceKind.Istemci => Client,
@@ -83,7 +117,9 @@ public static class Icons
     public static Brush BrushOf(DeviceKind k) => Colors[k];
 
     /// <summary>Kodda kullanmak için hazır simge.</summary>
-    public static FrameworkElement Make(DeviceKind k, double size, Brush? brush = null) => new Viewbox
+    public static FrameworkElement Make(DeviceKind k, double size, Brush? brush = null) => Make(k.ToString(), size, brush);
+
+    public static FrameworkElement Make(string key, double size, Brush? brush = null) => new Viewbox
     {
         Width = size,
         Height = size,
@@ -95,8 +131,8 @@ public static class Icons
             {
                 new Path
                 {
-                    Data = Of(k),
-                    Stroke = brush ?? BrushOf(k),
+                    Data = ByKey(key),
+                    Stroke = brush ?? BrushByKey(key),
                     StrokeThickness = 1.8,
                     StrokeLineJoin = PenLineJoin.Round,
                     StrokeStartLineCap = PenLineCap.Round,
@@ -107,10 +143,13 @@ public static class Icons
     };
 
     /// <summary>Simge + yazı (menü ve açılır liste öğeleri için).</summary>
-    public static FrameworkElement Label(DeviceKind k, string text)
+    public static FrameworkElement Label(DeviceKind k, string text) => Label(k.ToString(), text);
+
+    /// <summary>Simge anahtarıyla (bölme simgeleri dahil) simge + yazı.</summary>
+    public static FrameworkElement Label(string key, string text)
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        var icon = Make(k, 18);
+        var icon = Make(key, 18);
         icon.Margin = new Thickness(0, 0, 9, 0);
         icon.VerticalAlignment = VerticalAlignment.Center;
         panel.Children.Add(icon);

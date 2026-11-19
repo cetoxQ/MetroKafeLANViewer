@@ -20,7 +20,7 @@ public partial class MainWindow : Window
     readonly DispatcherTimer _timer = new();
     readonly DispatcherTimer _updateTimer = new() { Interval = TimeSpan.FromHours(6) };
     readonly ObservableCollection<Tile> _clientTiles = [];
-    readonly ObservableCollection<Tile> _otherTiles = [];
+    readonly ObservableCollection<GroupView> _groups = [];
     readonly Dictionary<uint, Tile> _tileByIp = [];
     readonly TrayIcon _tray;
     AppSettings _settings = Store.LoadSettings();
@@ -47,7 +47,7 @@ public partial class MainWindow : Window
         DeviceGrid.ItemsSource = _view;
         EventsList.ItemsSource = _monitor.Events;
         ClientTilesView.ItemsSource = _clientTiles;
-        OtherTilesView.ItemsSource = _otherTiles;
+        GroupsView.ItemsSource = _groups;
         _monitor.NewConflicts += OnNewConflicts;
         foreach (var k in new[] { DeviceKind.Istemci, DeviceKind.Bilgisayar, DeviceKind.Kamera, DeviceKind.Modem, DeviceKind.Router,
                      DeviceKind.AgCihazi, DeviceKind.Mobil, DeviceKind.Yazici, DeviceKind.Bilinmiyor })
@@ -59,6 +59,7 @@ public partial class MainWindow : Window
             IconLegend.Children.Add(label);
         }
         _monitor.Events.CollectionChanged += (_, _) => UpdateEventsTab();
+        InitMap();
 
         _tray = new TrayIcon(Application.GetResourceStream(new Uri("pack://application:,,,/app.ico")).Stream);
         _tray.ShowRequested += ShowFromTray;
@@ -87,13 +88,13 @@ public partial class MainWindow : Window
     {
         _monitor.Configure(_settings);
         AutoBox.IsChecked = _settings.AutoScan;
-        AutoBox.Content = $"Otomatik tara ({FormatInterval(_settings.IntervalSeconds)})";
+        ShowInterval();
         _timer.Interval = TimeSpan.FromSeconds(Math.Max(15, _settings.IntervalSeconds));
+        ScaleSlider.Value = Math.Clamp(_settings.TileScale, ScaleSlider.Minimum, ScaleSlider.Maximum);
         BuildTiles();
+        BuildGroups();
         RefreshAll();
     }
-
-    static string FormatInterval(int s) => s % 60 == 0 ? $"{s / 60} dk" : $"{s} sn";
 
     // ---------------------------------------------------------------- tarama
 
@@ -204,7 +205,10 @@ public partial class MainWindow : Window
     void UpdateTileFor(uint ip)
     {
         if (_tileByIp.TryGetValue(ip, out var t))
-            t.Set(_monitor.Devices.FirstOrDefault(d => d.Online && d.IpNum == ip) ?? _monitor.Devices.FirstOrDefault(d => d.IpNum == ip && d.Kind == DeviceKind.Istemci), _monitor.ClientOwnerOf(ip));
+        {
+            t.Set(_monitor.Devices.FirstOrDefault(d => d.Online && d.IpNum == ip), _monitor.ClientOwnerOf(ip));
+            t.Selected = t.Device != null && _selected.Contains(t.Device.Key);
+        }
         UpdateSummary();
     }
 
@@ -212,18 +216,11 @@ public partial class MainWindow : Window
     {
         var online = _monitor.Devices.Where(d => d.Online).GroupBy(d => d.IpNum).ToDictionary(g => g.Key, g => g.First());
         foreach (var t in _clientTiles)
-            t.Set(online.GetValueOrDefault(t.Ip), _monitor.ClientOwnerOf(t.Ip));
-
-        // İstemci aralığı dışındaki açık cihazlar (kameralar, modemler, Wi-Fi cihazları)
-        var others = online.Values.Where(d => !d.InClientRange).OrderBy(d => d.IpNum).ToList();
-        _otherTiles.Clear();
-        foreach (var d in others)
         {
-            var t = new Tile { Ip = d.IpNum };
-            t.Set(d, null);
-            _otherTiles.Add(t);
+            t.Set(online.GetValueOrDefault(t.Ip), _monitor.ClientOwnerOf(t.Ip));
+            t.Selected = t.Device != null && _selected.Contains(t.Device.Key);
         }
-        OtherHeader.Text = $"Diğer cihazlar ({others.Count}) — kameralar, modemler, Wi-Fi ve ethernet cihazları";
+        FillGroups();
         _view.Refresh();
         UpdateSummary();
     }
@@ -309,20 +306,6 @@ public partial class MainWindow : Window
 
     // ---------------------------------------------------------------- cihaz işlemleri
 
-    void Tile_MouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ClickCount == 2 && sender is FrameworkElement { DataContext: Tile { Device: { } d } }) EditDevice(d);
-    }
-
-    void Tile_RightClick(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is not FrameworkElement { DataContext: Tile t } el) return;
-        var menu = t.Device != null ? BuildMenu([t.Device]) : BuildEmptyMenu(t.Ip);
-        menu.PlacementTarget = el;
-        menu.IsOpen = true;
-        e.Handled = true;
-    }
-
     void Grid_DoubleClick(object sender, MouseButtonEventArgs e)
     {
         if ((e.OriginalSource as DependencyObject)?.FindRow() is { Item: Device d }) EditDevice(d);
@@ -393,6 +376,16 @@ public partial class MainWindow : Window
             _monitor.FinishScan();
             RefreshAll();
         });
+        menu.Items.Add(new Separator());
+        foreach (var g in _settings.Groups)
+        {
+            var item = new MenuItem { Header = Icons.Label(g.Icon, $"\"{g.Name}\" bölmesine taşı") };
+            item.Click += (_, _) => MoveToGroup(list, g.Id);
+            menu.Items.Add(item);
+        }
+        Add("Yeni bölmeye taşı...", () => AddGroup(list));
+        if (list.Any(x => x.Group != null)) Add("Bölmeden çıkar (Diğer cihazlar'a)", () => MoveToGroup(list, null));
+        if (_selected.Count > 0) Add("Seçimi temizle", ClearSelection);
         menu.Items.Add(new Separator());
         Add(list.Count == 1 ? "Kayıttan sil" : $"{list.Count} cihazı kayıttan sil", () =>
         {

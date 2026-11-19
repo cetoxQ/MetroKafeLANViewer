@@ -44,6 +44,8 @@ public sealed class Device : INotifyPropertyChanged
     public bool WasClient { get; set; }
     /// <summary>Bilerek istemci aralığında duran cihaz (sabit IP'li sunucu vb.): çakışma sayılmaz.</summary>
     public bool IgnoreConflict { get; set; }
+    /// <summary>Haritada durduğu bölmenin kimliği (<see cref="GroupDef.Id"/>); null ise "Diğer cihazlar".</summary>
+    public string? Group { get; set; }
     public string? Hostname { get => _hostname; set => Set(ref _hostname, value, nameof(DisplayName)); }
     public string? Workgroup { get; set; }
     public string? Vendor { get => _vendor; set => Set(ref _vendor, value, nameof(DisplayName)); }

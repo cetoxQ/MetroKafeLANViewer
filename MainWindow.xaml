@@ -5,12 +5,27 @@
         WindowStartupLocation="CenterScreen" Style="{StaticResource DarkWindow}"
         Icon="app.ico">
     <Window.Resources>
+        <!-- Kutu boyutu: tüm kutular bu tek ölçeği kullanır (Kutu boyutu çubuğu) -->
+        <ScaleTransform x:Key="TileScale" ScaleX="1" ScaleY="1"/>
+
         <!-- Haritadaki IP kutusu -->
         <DataTemplate x:Key="TileTemplate">
-            <Border Width="78" Height="58" Margin="3" CornerRadius="6" BorderThickness="1.5"
-                    Background="{Binding Fill}" BorderBrush="{Binding Edge}" ToolTip="{Binding Tip}"
+            <Border Tag="tile" Width="78" Height="58" Margin="3" CornerRadius="6"
+                    Background="{Binding Fill}" ToolTip="{Binding Tip}" LayoutTransform="{StaticResource TileScale}"
                     ToolTipService.InitialShowDelay="250" Cursor="Hand"
                     MouseLeftButtonDown="Tile_MouseDown" MouseRightButtonUp="Tile_RightClick">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{Binding Edge}"/>
+                        <Setter Property="BorderThickness" Value="1.5"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Selected}" Value="True">
+                                <Setter Property="BorderBrush" Value="White"/>
+                                <Setter Property="BorderThickness" Value="3"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Viewbox Width="17" Height="17" Margin="0,1,5,0" Visibility="{Binding IconVisibility}" VerticalAlignment="Center">
@@ -29,6 +44,68 @@
         <ItemsPanelTemplate x:Key="WrapPanelTemplate">
             <WrapPanel/>
         </ItemsPanelTemplate>
+
+        <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource FlatButton}">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="7,5"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+        </Style>
+
+        <!-- Alt kısımdaki bölme: başlık (simge, ad, sayı), kutular, sağ altta boyut tutamağı -->
+        <DataTemplate x:Key="GroupTemplate">
+            <Border Width="{Binding Width}" Height="{Binding Height}" Margin="0,0,10,10" CornerRadius="8"
+                    Background="{StaticResource PanelBrush}" AllowDrop="True"
+                    DragEnter="Group_DragOver" DragOver="Group_DragOver" DragLeave="Group_DragLeave" Drop="Group_Drop">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DropTarget}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="BorderThickness" Value="2"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="10,6,6,2">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding ButtonsVisibility}">
+                                <Button Style="{StaticResource IconButton}" Content="&#xE70F;" ToolTip="Adını / simgesini değiştir" Click="GroupEdit_Click"/>
+                                <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Bölmeyi sil (içindekiler Diğer cihazlar'a döner)" Click="GroupDelete_Click"/>
+                            </StackPanel>
+                            <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+                                <Canvas Width="24" Height="24">
+                                    <Path Data="{Binding Icon}" Stroke="{Binding IconBrush}" StrokeThickness="1.8" StrokeLineJoin="Round"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                </Canvas>
+                            </Viewbox>
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Hint}" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="5,0,5,8">
+                            <ItemsControl ItemsSource="{Binding Tiles}" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
+                        </ScrollViewer>
+                    </DockPanel>
+                    <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="16" Height="16" Cursor="SizeNWSE"
+                           ToolTip="Boyutu değiştirmek için sürükleyin" DragDelta="Group_Resize" DragCompleted="Group_ResizeDone">
+                        <Thumb.Template>
+                            <ControlTemplate TargetType="Thumb">
+                                <Grid Background="Transparent">
+                                    <Path Data="M14,4 L4,14 M14,9 L9,14" Stroke="#6B7891" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                </Grid>
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
+                </Grid>
+            </Border>
+        </DataTemplate>
         <Style x:Key="ChipButton" TargetType="RadioButton" BasedOn="{StaticResource TabButton}">
             <Setter Property="FontSize" Value="13"/>
         </Style>
@@ -63,7 +140,14 @@
                     </RadioButton>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <CheckBox x:Name="AutoBox" Content="Otomatik tara" Margin="0,0,14,0" Click="AutoBox_Click"/>
+                    <CheckBox x:Name="AutoBox" Content="Otomatik tara, her" VerticalAlignment="Center" Click="AutoBox_Click"/>
+                    <TextBox x:Name="IntervalBox" Width="52" Margin="8,0,6,0" HorizontalContentAlignment="Center" Padding="4,4"
+                             ToolTip="Kaç saniyede / dakikada bir taransın (en az 15 saniye). Yazıp Enter'a basın."
+                             LostFocus="Interval_Changed" KeyDown="IntervalBox_KeyDown"/>
+                    <ComboBox x:Name="IntervalUnit" Width="64" Height="32" Margin="0,0,14,0" SelectionChanged="Interval_Changed">
+                        <ComboBoxItem Content="sn"/>
+                        <ComboBoxItem Content="dk"/>
+                    </ComboBox>
                     <Button x:Name="ScanButton" Style="{StaticResource PrimaryButton}" MinWidth="120" Click="ScanButton_Click">
                         <TextBlock x:Name="ScanButtonText" Text="Şimdi tara" Foreground="White"/>
                     </Button>
@@ -96,10 +180,15 @@
 
         <!-- Harita -->
         <ScrollViewer x:Name="MapPanel" Grid.Row="3" VerticalScrollBarVisibility="Auto" Padding="14,10">
+            <!-- Boş yerden sürükleyince seçim çerçevesi çizilir -->
+            <Grid x:Name="MapContent" Background="Transparent">
             <StackPanel>
                 <DockPanel Margin="3,0,3,6">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Style="{StaticResource LegendDot}" Background="#0F2E1E" BorderBrush="#22C55E"/>
+                        <TextBlock Text="Kutu boyutu" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Slider x:Name="ScaleSlider" Width="130" Minimum="0.6" Maximum="1.8" SmallChange="0.05" LargeChange="0.1"
+                                VerticalAlignment="Center" ValueChanged="ScaleSlider_ValueChanged" ToolTip="Haritadaki kutuların boyutu"/>
+                        <Border Style="{StaticResource LegendDot}" Background="#0F2E1E" BorderBrush="#22C55E" Margin="20,0,6,0"/>
                         <TextBlock Text="İstemci" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
                         <Border Style="{StaticResource LegendDot}" Background="#5B1219" BorderBrush="#EF4444"/>
                         <TextBlock Text="Çakışma" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
@@ -113,10 +202,21 @@
                     <TextBlock x:Name="ClientHeader" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
                 </DockPanel>
                 <ItemsControl x:Name="ClientTilesView" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
-                <TextBlock x:Name="OtherHeader" Style="{StaticResource SectionTitle}" Margin="3,18,3,4"/>
-                <WrapPanel x:Name="IconLegend" Margin="3,0,3,8"/>
-                <ItemsControl x:Name="OtherTilesView" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
+                <DockPanel Margin="3,18,3,4">
+                    <Button DockPanel.Dock="Right" Content="+ Bölme ekle" Click="GroupAdd_Click"
+                            ToolTip="Sunucular, modemler, aralık dışı istemciler gibi cihazları ayırmak için yeni bölme"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Diğer cihazlar ve bölmeler" Style="{StaticResource SectionTitle}" Margin="0"/>
+                        <TextBlock x:Name="SelectionText" FontSize="12" Margin="14,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}"/>
+                    </StackPanel>
+                </DockPanel>
+                <WrapPanel x:Name="IconLegend" Margin="3,2,3,8"/>
+                <ItemsControl x:Name="GroupsView" ItemTemplate="{StaticResource GroupTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
             </StackPanel>
+                <Canvas IsHitTestVisible="False">
+                    <Rectangle x:Name="SelectRect" Visibility="Collapsed" Stroke="#3B82F6" StrokeThickness="1" Fill="#333B82F6"/>
+                </Canvas>
+            </Grid>
         </ScrollViewer>
 
         <!-- Liste -->

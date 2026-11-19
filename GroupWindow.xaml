@@ -1,0 +1,37 @@
+<Window x:Class="MetroKafeLANViewer.GroupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Bölme" Width="470" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Style="{StaticResource DarkWindow}">
+    <StackPanel Margin="20,10,20,18">
+        <TextBlock Text="Bölme adı" Style="{StaticResource FieldLabel}"/>
+        <TextBox x:Name="NameBox"/>
+        <TextBlock Text="Simge" Style="{StaticResource FieldLabel}"/>
+        <ListBox x:Name="IconList" ItemContainerStyle="{StaticResource RowItem}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Width="78" ToolTip="{Binding Text}">
+                        <Viewbox Width="30" Height="30" HorizontalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{Binding Icon}" Stroke="{Binding Brush}" StrokeThickness="1.8" StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                        <TextBlock Text="{Binding Text}" FontSize="11" HorizontalAlignment="Center" Margin="0,4,0,0"
+                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource MutedBrush}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock x:Name="Error" Foreground="{StaticResource DangerBrush}" Margin="0,8,0,0" Visibility="Collapsed" Text="Bir ad yazın."/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Vazgeç" IsCancel="True" MinWidth="90" Margin="0,0,8,0"/>
+            <Button Content="Kaydet" IsDefault="True" Style="{StaticResource PrimaryButton}" MinWidth="90" Click="Save_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

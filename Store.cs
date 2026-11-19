@@ -27,6 +27,23 @@ public sealed class AppSettings
     public bool CheckUpdates { get; set; } = true;
     /// <summary>Liste görünümündeki son seçilen sekme ve süzgeç.</summary>
     public int Tab { get; set; }
+    /// <summary>Haritadaki kutuların büyüklüğü (1 = normal).</summary>
+    public double TileScale { get; set; } = 1;
+    /// <summary>Haritanın altındaki kullanıcı bölmeleri (sunucular, modemler, aralık dışı istemciler...).</summary>
+    public List<GroupDef> Groups { get; set; } = [];
+    /// <summary>Bölmesi olmayan cihazların durduğu "Diğer cihazlar" bölmesinin boyutu.</summary>
+    public double OtherWidth { get; set; } = 760;
+    public double OtherHeight { get; set; } = 230;
+}
+
+public sealed class GroupDef
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+    public string Name { get; set; } = "Yeni bölme";
+    /// <summary>Simge anahtarı: <see cref="Icons.ByKey"/>.</summary>
+    public string Icon { get; set; } = "Klasor";
+    public double Width { get; set; } = 380;
+    public double Height { get; set; } = 180;
 }
 
 /// <summary>Cihaz kayıtları: cihazlar ve her istemci IP'sinde en son görülen istemci.</summary>

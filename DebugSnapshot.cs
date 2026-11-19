@@ -19,6 +19,7 @@ static class DebugSnapshot
     {
         string dir = Folder!;
         Directory.CreateDirectory(dir);
+        if (Environment.GetEnvironmentVariable("MKL_SELECT") is { } n) w.DebugSelect(int.Parse(n));
         for (int tab = 0; tab < 3; tab++)
         {
             selectTab(tab);
@@ -29,6 +30,18 @@ static class DebugSnapshot
                 w.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
             }
             Save(w, Path.Combine(dir, $"sekme{tab}.png"));
+        }
+        // Harita aşağı kaydırılmış (bölmeler) ve küçük kutularla
+        selectTab(0);
+        foreach (double scale in new[] { 1.0, 0.7 })
+        {
+            w.DebugScale(scale);
+            for (int i = 0; i < 5; i++)
+            {
+                w.UpdateLayout();
+                w.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+            }
+            Save(w, Path.Combine(dir, $"bolmeler-{scale * 100:0}.png"));
         }
         // Simge örnekleri (büyük) ve bulunan türler
         var sheet = new System.Windows.Controls.WrapPanel { Background = (Brush)w.FindResource("BgBrush"), Width = 900 };
