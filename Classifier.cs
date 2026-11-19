@@ -30,6 +30,9 @@ public static class Classifier
         "grandstream", "edimax", "linksys", "airties", "sagemcom", "technicolor", "arcadyan", "hp enterprise", "aruba networks",
     ];
 
+    // Ev/kafe tipi Wi-Fi router markaları
+    static readonly string[] RouterVendors = ["tp-link", "tenda", "mercusys", "keenetic", "netgear", "d-link", "linksys", "airties", "totolink", "xiaomi communications"];
+
     static readonly string[] PrinterVendors = ["epson", "brother", "canon", "kyocera", "ricoh", "xerox", "lexmark", "sharp", "konica", "zebra"];
 
     static readonly string[] MobileVendors = ["apple", "samsung electronics", "xiaomi", "oppo", "vivo", "realme", "oneplus", "honor", "huawei device", "motorola", "google"];
@@ -75,8 +78,11 @@ public static class Classifier
             return (DeviceKind.Bilgisayar, $"Windows bilgisayar (istemci aralığı dışında): {d.Hostname}");
         }
 
-        if (d.IsGateway) return (DeviceKind.AgCihazi, "Ağ geçidi (modem / yönlendirici)");
+        if (d.IsGateway) return (DeviceKind.Modem, "Ağ geçidi (internet modemi)");
         if (ports.Contains(9100) || PrinterVendors.Any(vendor.Contains)) return (DeviceKind.Yazici, ports.Contains(9100) ? "Yazıcı portu (9100) açık" : $"Üretici: {d.Vendor}");
+        // DNS (53) sunan cihaz kendi ağını dağıtıyordur: Wi-Fi router
+        if (ports.Contains(53)) return (DeviceKind.Router, "DNS (53) açık — yönlendirici" + (d.Vendor != null ? $", {d.Vendor}" : ""));
+        if (RouterVendors.FirstOrDefault(vendor.Contains) is { }) return (DeviceKind.Router, $"Üretici: {d.Vendor}");
         if (NetworkVendors.FirstOrDefault(vendor.Contains) is { }) return (DeviceKind.AgCihazi, $"Üretici: {d.Vendor}");
         if (ports.Contains(445) || ports.Contains(3389)) return (DeviceKind.Bilgisayar, "Windows paylaşım/RDP portu açık");
         if (Oui.IsRandomized(d.Mac)) return (DeviceKind.Mobil, "Rastgele (gizli) MAC — telefon/tablet Wi-Fi'si");

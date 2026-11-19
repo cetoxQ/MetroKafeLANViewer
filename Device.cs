@@ -5,7 +5,8 @@ using MetroKafeLANViewer.Net;
 
 namespace MetroKafeLANViewer;
 
-public enum DeviceKind { Bilinmiyor, Istemci, Bilgisayar, Kamera, AgCihazi, Yazici, Mobil }
+// Kayıtta adıyla tutulur; sıra değişebilir
+public enum DeviceKind { Bilinmiyor, Istemci, Bilgisayar, Kamera, Modem, Router, AgCihazi, Yazici, Mobil }
 
 public static class Kinds
 {
@@ -14,7 +15,9 @@ public static class Kinds
         DeviceKind.Istemci => "İstemci",
         DeviceKind.Bilgisayar => "Bilgisayar",
         DeviceKind.Kamera => "Kamera",
-        DeviceKind.AgCihazi => "Ağ cihazı",
+        DeviceKind.Modem => "Modem",
+        DeviceKind.Router => "Wi-Fi router",
+        DeviceKind.AgCihazi => "Ağ cihazı (switch / AP)",
         DeviceKind.Yazici => "Yazıcı",
         DeviceKind.Mobil => "Telefon / tablet",
         _ => "Bilinmiyor",
@@ -53,7 +56,17 @@ public sealed class Device : INotifyPropertyChanged
     [JsonIgnore] public int? PingMs { get => _ping; set => Set(ref _ping, value, nameof(PingText)); }
     [JsonIgnore] public int[] OpenPorts { get => _ports; set => Set(ref _ports, value, nameof(PortsText)); }
     [JsonIgnore] public string? Banner { get => _banner; set => Set(ref _banner, value, nameof(PortsText)); }
-    [JsonIgnore] public DeviceKind Kind { get => _kind; set => Set(ref _kind, value, nameof(KindText)); }
+    [JsonIgnore]
+    public DeviceKind Kind
+    {
+        get => _kind;
+        set
+        {
+            Set(ref _kind, value, nameof(KindText));
+            PropertyChanged?.Invoke(this, new(nameof(KindIcon)));
+            PropertyChanged?.Invoke(this, new(nameof(KindBrush)));
+        }
+    }
     [JsonIgnore] public string? KindReason { get => _kindReason; set => Set(ref _kindReason, value); }
     [JsonIgnore] public bool InClientRange { get => _inClient; set => Set(ref _inClient, value); }
     [JsonIgnore] public bool Conflict { get => _conflict; set => Set(ref _conflict, value, nameof(StatusText)); }
@@ -67,6 +80,8 @@ public sealed class Device : INotifyPropertyChanged
     [JsonIgnore] public string Ip => IpNum == 0 ? "" : IpRange.FromUInt(IpNum).ToString();
     [JsonIgnore] public string DisplayName => Name ?? Hostname ?? "";
     [JsonIgnore] public string KindText => Kinds.Text(Kind);
+    [JsonIgnore] public System.Windows.Media.Geometry KindIcon => Icons.Of(Kind);
+    [JsonIgnore] public System.Windows.Media.Brush KindBrush => Icons.BrushOf(Kind);
     [JsonIgnore] public string PingText => PingMs is { } ms ? (ms == 0 ? "<1" : ms.ToString()) : Online ? "—" : "";
     [JsonIgnore] public string StatusText => Conflict ? "ÇAKIŞMA" : Online ? "Açık" : "Kapalı";
     [JsonIgnore]

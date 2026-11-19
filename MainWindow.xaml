@@ -12,7 +12,15 @@
                     ToolTipService.InitialShowDelay="250" Cursor="Hand"
                     MouseLeftButtonDown="Tile_MouseDown" MouseRightButtonUp="Tile_RightClick">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Number}" FontSize="19" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{Binding NumberBrush}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Viewbox Width="17" Height="17" Margin="0,1,5,0" Visibility="{Binding IconVisibility}" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{Binding Icon}" Stroke="{Binding IconBrush}" StrokeThickness="2" StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                        <TextBlock Text="{Binding Number}" FontSize="19" FontWeight="Bold" Foreground="{Binding NumberBrush}"/>
+                    </StackPanel>
                     <TextBlock Text="{Binding Label}" FontSize="10" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
                                Margin="4,0" Foreground="{StaticResource MutedBrush}"/>
                 </StackPanel>
@@ -105,7 +113,8 @@
                     <TextBlock x:Name="ClientHeader" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
                 </DockPanel>
                 <ItemsControl x:Name="ClientTilesView" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
-                <TextBlock x:Name="OtherHeader" Style="{StaticResource SectionTitle}" Margin="3,18,3,6"/>
+                <TextBlock x:Name="OtherHeader" Style="{StaticResource SectionTitle}" Margin="3,18,3,4"/>
+                <WrapPanel x:Name="IconLegend" Margin="3,0,3,8"/>
                 <ItemsControl x:Name="OtherTilesView" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
             </StackPanel>
         </ScrollViewer>
@@ -186,10 +195,18 @@
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="IP" Binding="{Binding Ip}" SortMemberPath="IpNum" Width="112"/>
                     <DataGridTextColumn Header="Ad" Binding="{Binding DisplayName}" Width="1.2*"/>
-                    <DataGridTemplateColumn Header="Tür" Width="120" SortMemberPath="KindText">
+                    <DataGridTemplateColumn Header="Tür" Width="150" SortMemberPath="KindText">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding KindText}" ToolTip="{Binding KindReason}"/>
+                                <StackPanel Orientation="Horizontal" ToolTip="{Binding KindReason}" Background="Transparent">
+                                    <Viewbox Width="17" Height="17" Margin="0,0,8,0" VerticalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="{Binding KindIcon}" Stroke="{Binding KindBrush}" StrokeThickness="1.8" StrokeLineJoin="Round"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                        </Canvas>
+                                    </Viewbox>
+                                    <TextBlock Text="{Binding KindText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

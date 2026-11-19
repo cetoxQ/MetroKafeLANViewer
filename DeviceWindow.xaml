@@ -11,7 +11,21 @@
         <TextBox x:Name="NameBox"/>
 
         <TextBlock Text="Tür" Style="{StaticResource FieldLabel}"/>
-        <ComboBox x:Name="KindBox" Height="34"/>
+        <ComboBox x:Name="KindBox" Height="36">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <Viewbox Width="18" Height="18" Margin="0,0,9,0" Visibility="{Binding IconVisibility}" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{Binding Icon}" Stroke="{Binding Brush}" StrokeThickness="1.8" StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                        <TextBlock Text="{Binding Text}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
         <TextBlock x:Name="KindHint" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
 
         <TextBlock Text="Not" Style="{StaticResource FieldLabel}"/>

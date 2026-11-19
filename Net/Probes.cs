@@ -110,7 +110,7 @@ public static partial class Probes
     // ---------------------------------------------------------------- portlar
 
     /// <summary>Cihaz türünü anlamaya yarayan portlar.</summary>
-    public static readonly int[] KnownPorts = [80, 443, 554, 8000, 8080, 37777, 34567, 9100, 445, 3389, 5900];
+    public static readonly int[] KnownPorts = [80, 443, 554, 8000, 8080, 37777, 34567, 9100, 445, 3389, 5900, 53];
 
     public static string PortName(int port) => port switch
     {
@@ -125,6 +125,7 @@ public static partial class Probes
         445 => "SMB",
         3389 => "RDP",
         5900 => "VNC",
+        53 => "DNS",
         _ => port.ToString(),
     };
 

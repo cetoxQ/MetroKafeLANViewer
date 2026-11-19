@@ -49,6 +49,15 @@ public partial class MainWindow : Window
         ClientTilesView.ItemsSource = _clientTiles;
         OtherTilesView.ItemsSource = _otherTiles;
         _monitor.NewConflicts += OnNewConflicts;
+        foreach (var k in new[] { DeviceKind.Istemci, DeviceKind.Bilgisayar, DeviceKind.Kamera, DeviceKind.Modem, DeviceKind.Router,
+                     DeviceKind.AgCihazi, DeviceKind.Mobil, DeviceKind.Yazici, DeviceKind.Bilinmiyor })
+        {
+            var label = Icons.Label(k, Kinds.Text(k));
+            label.Margin = new Thickness(0, 0, 18, 0);
+            ((TextBlock)((StackPanel)label).Children[1]).Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush");
+            ((TextBlock)((StackPanel)label).Children[1]).FontSize = 12;
+            IconLegend.Children.Add(label);
+        }
         _monitor.Events.CollectionChanged += (_, _) => UpdateEventsTab();
 
         _tray = new TrayIcon(Application.GetResourceStream(new Uri("pack://application:,,,/app.ico")).Stream);
@@ -366,8 +375,12 @@ public partial class MainWindow : Window
             foreach (var x in list.Where(x => x.Mac != null)) await Probes.WakeAsync(x.Mac!);
         }, list.Any(x => x.Mac != null));
         menu.Items.Add(new Separator());
-        foreach (var kind in new[] { DeviceKind.Istemci, DeviceKind.Kamera, DeviceKind.AgCihazi, DeviceKind.Bilgisayar })
-            Add($"Türü \"{Kinds.Text(kind)}\" yap", () => SetKind(list, kind));
+        foreach (var kind in new[] { DeviceKind.Istemci, DeviceKind.Kamera, DeviceKind.Modem, DeviceKind.Router, DeviceKind.Mobil, DeviceKind.Bilgisayar })
+        {
+            var item = new MenuItem { Header = Icons.Label(kind, $"Türü \"{Kinds.Text(kind)}\" yap") };
+            item.Click += (_, _) => SetKind(list, kind);
+            menu.Items.Add(item);
+        }
         Add("Türü otomatik bulsun", () => SetKind(list, null), list.Any(x => x.ManualKind != null));
         bool ignore = !d.IgnoreConflict;
         Add(ignore ? "Bu cihaz için uyarma (bilerek orada, ör. sabit IP)" : "Bu cihaz için yine uyar", () =>
@@ -545,6 +558,11 @@ public partial class MainWindow : Window
     }
 
     // ---------------------------------------------------------------- pencere
+
+#if DEBUG
+    public Device? FirstDevice(DeviceKind k) => _monitor.Devices.FirstOrDefault(d => d.Online && d.Kind == k);
+    public IEnumerable<Device> AllDevices() => _monitor.Devices;
+#endif
 
     public void ShowFromTray()
     {

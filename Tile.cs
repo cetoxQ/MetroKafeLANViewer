@@ -16,6 +16,10 @@ public sealed class Tile : INotifyPropertyChanged
     public Brush Edge { get; private set; } = EmptyEdge;
     public Brush NumberBrush { get; private set; } = Muted;
     public string Tip { get; private set; } = "";
+    /// <summary>Tür simgesi; boş IP'de yok.</summary>
+    public Geometry? Icon { get; private set; }
+    public Brush IconBrush { get; private set; } = Muted;
+    public System.Windows.Visibility IconVisibility => Icon == null ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
 
     static readonly System.Globalization.CultureInfo Tr = new("tr-TR");
 
@@ -44,6 +48,7 @@ public sealed class Tile : INotifyPropertyChanged
             Fill = d == null ? Empty : OfflineFill;
             Edge = d == null ? EmptyEdge : OfflineEdge;
             NumberBrush = Muted;
+            Icon = null;
             Tip = owner != null ? $"{ip} — boş\nEn son: {owner.DisplayName} ({owner.LastSeen:dd.MM HH:mm})" : $"{ip} — boş";
         }
         else
@@ -54,6 +59,8 @@ public sealed class Tile : INotifyPropertyChanged
                 : d.Kind == DeviceKind.Kamera ? (CameraFill, CameraEdge)
                 : (OtherFill, OtherEdge);
             NumberBrush = Text;
+            Icon = Icons.Of(d.Kind);
+            IconBrush = d.Conflict ? ConflictEdge : Icons.BrushOf(d.Kind);
             var lines = new List<string> { $"{ip} — {Kinds.Text(d.Kind)}" };
             if (d.Conflict) lines.Add("⚠ " + d.ConflictText);
             if (!string.IsNullOrEmpty(d.DisplayName)) lines.Add(d.DisplayName);

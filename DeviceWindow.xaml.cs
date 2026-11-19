@@ -2,6 +2,11 @@ using System.Windows;
 
 namespace MetroKafeLANViewer;
 
+public sealed record KindOption(System.Windows.Media.Geometry? Icon, System.Windows.Media.Brush Brush, string Text)
+{
+    public Visibility IconVisibility => Icon == null ? Visibility.Collapsed : Visibility.Visible;
+}
+
 public partial class DeviceWindow : Window
 {
     readonly Device _device;
@@ -22,8 +27,9 @@ public partial class DeviceWindow : Window
         NameBox.Text = d.Name ?? "";
         NoteBox.Text = d.Note ?? "";
 
-        KindBox.Items.Add(d.ManualKind == null ? $"Otomatik (şu an: {Kinds.Text(d.Kind)})" : "Otomatik bulsun");
-        foreach (var k in Kinds.All) KindBox.Items.Add(Kinds.Text(k));
+        KindBox.Items.Add(new KindOption(null, Icons.BrushOf(DeviceKind.Bilinmiyor),
+            d.ManualKind == null ? $"Otomatik (şu an: {Kinds.Text(d.Kind)})" : "Otomatik bulsun"));
+        foreach (var k in Kinds.All) KindBox.Items.Add(new KindOption(Icons.Of(k), Icons.BrushOf(k), Kinds.Text(k)));
         KindBox.SelectedIndex = d.ManualKind is { } m ? Array.IndexOf(Kinds.All, m) + 1 : 0;
         KindHint.Text = d.ManualKind == null ? $"Otomatik bulundu: {d.KindReason}" : "Elle seçildi.";
         Loaded += (_, _) => NameBox.Focus();

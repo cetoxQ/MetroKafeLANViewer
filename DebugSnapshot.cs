@@ -30,6 +30,30 @@ static class DebugSnapshot
             }
             Save(w, Path.Combine(dir, $"sekme{tab}.png"));
         }
+        // Simge örnekleri (büyük) ve bulunan türler
+        var sheet = new System.Windows.Controls.WrapPanel { Background = (Brush)w.FindResource("BgBrush"), Width = 900 };
+        foreach (var k in Kinds.All)
+        {
+            var label = Icons.Label(k, Kinds.Text(k));
+            ((FrameworkElement)((System.Windows.Controls.StackPanel)label).Children[0]).Width = 56;
+            ((FrameworkElement)((System.Windows.Controls.StackPanel)label).Children[0]).Height = 56;
+            label.Margin = new Thickness(14);
+            sheet.Children.Add(label);
+        }
+        sheet.Measure(new Size(900, double.PositiveInfinity));
+        sheet.Arrange(new Rect(sheet.DesiredSize));
+        Save(sheet, Path.Combine(dir, "simgeler.png"));
+        File.WriteAllLines(Path.Combine(dir, "turler.txt"), w.AllDevices().Where(d => d.Online).OrderBy(d => d.IpNum).Select(d => $"{d.Ip}	{d.KindText}	{d.KindReason}"));
+
+        // Düzenleme penceresi (tür listesi açık)
+        if (w.FirstDevice(DeviceKind.Kamera) is { } cam)
+        {
+            var dw = new DeviceWindow(cam) { Owner = w, WindowStartupLocation = WindowStartupLocation.Manual, Left = -3000 };
+            dw.Show();
+            dw.UpdateLayout();
+            Save((FrameworkElement)dw.Content, Path.Combine(dir, "duzenle.png"));
+            dw.Close();
+        }
         exit();
     }
 
