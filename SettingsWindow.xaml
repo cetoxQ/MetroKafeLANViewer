@@ -1,0 +1,57 @@
+<Window x:Class="MetroKafeLANViewer.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ayarlar" Width="600" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Style="{StaticResource DarkWindow}">
+    <StackPanel Margin="20,10,20,18">
+        <TextBlock Text="Tarama" Style="{StaticResource SectionTitle}"/>
+        <TextBlock Text="Taranacak aralıklar (virgülle ayırın)" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+        <TextBox x:Name="ScanBox" ToolTip="Örnek: 192.168.2.1-254   veya   192.168.2.0/24, 192.168.3.1-50"/>
+        <TextBlock Text="İstemci IP aralığı — burada istemci olmayan her cihaz çakışma sayılır" Style="{StaticResource FieldLabel}"/>
+        <TextBox x:Name="ClientBox" ToolTip="Örnek: 192.168.2.1-110"/>
+        <TextBlock Text="İstemci bilgisayar adı kalıbı (isteğe bağlı)" Style="{StaticResource FieldLabel}"/>
+        <TextBox x:Name="PatternBox" ToolTip="Boş: Windows adı olan her bilgisayar istemcidir. Örnek: ^MASA-?\d+ veya ^PC\d+"/>
+        <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                   Text="Boş bırakılırsa Windows adı veren her bilgisayar istemci sayılır. Kasa gibi başka bilgisayarlar da bu aralıktaysa kalıp yazın, ör. ^MASA veya ^PC\d+"/>
+
+        <Grid Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Otomatik tarama aralığı (saniye)" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="IntervalBox"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Ping bekleme süresi (ms)" Style="{StaticResource FieldLabel}"/>
+                <TextBox x:Name="PingBox"/>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Text="Uyarılar ve pencere" Style="{StaticResource SectionTitle}"/>
+        <CheckBox x:Name="SoundBox" Content="Yeni çakışmada sesli uyarı"/>
+        <CheckBox x:Name="NotifyBox" Content="Yeni çakışmada saat yanında bildirim göster" Margin="0,6,0,0"/>
+        <CheckBox x:Name="TrayBox" Content="Pencereyi kapatınca bildirim alanında çalışmaya devam et" Margin="0,6,0,0"/>
+        <CheckBox x:Name="StartupBox" Content="Windows açılınca başlat (bildirim alanında)" Margin="0,6,0,0"/>
+
+        <TextBlock Text="Güncelleme" Style="{StaticResource SectionTitle}"/>
+        <CheckBox x:Name="UpdateBox" Content="Yeni sürümü kendiliğinden denetle (6 saatte bir)"/>
+        <TextBlock Text="GitHub anahtarı (depo gizliyken gerekir)" Style="{StaticResource FieldLabel}"/>
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Şimdi denetle" Margin="8,0,0,0" Click="Check_Click"/>
+            <PasswordBox x:Name="TokenBox"/>
+        </DockPanel>
+        <TextBlock x:Name="TokenHint" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+
+        <TextBlock x:Name="Error" Foreground="{StaticResource DangerBrush}" Margin="0,10,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+        <DockPanel Margin="0,18,0,0">
+            <TextBlock x:Name="FolderText" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Vazgeç" IsCancel="True" MinWidth="90" Margin="0,0,8,0"/>
+                <Button Content="Kaydet" IsDefault="True" Style="{StaticResource PrimaryButton}" MinWidth="90" Click="Save_Click"/>
+            </StackPanel>
+        </DockPanel>
+    </StackPanel>
+</Window>

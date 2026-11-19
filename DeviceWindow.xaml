@@ -1,0 +1,25 @@
+<Window x:Class="MetroKafeLANViewer.DeviceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cihaz" Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Style="{StaticResource DarkWindow}">
+    <StackPanel Margin="20,14,20,18">
+        <TextBlock x:Name="Header" FontSize="18" FontWeight="SemiBold"/>
+        <TextBlock x:Name="Info" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="19"/>
+
+        <TextBlock Text="Ad" Style="{StaticResource FieldLabel}"/>
+        <TextBox x:Name="NameBox"/>
+
+        <TextBlock Text="Tür" Style="{StaticResource FieldLabel}"/>
+        <ComboBox x:Name="KindBox" Height="34"/>
+        <TextBlock x:Name="KindHint" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+
+        <TextBlock Text="Not" Style="{StaticResource FieldLabel}"/>
+        <TextBox x:Name="NoteBox" Height="64" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="Vazgeç" IsCancel="True" MinWidth="90" Margin="0,0,8,0"/>
+            <Button Content="Kaydet" IsDefault="True" Style="{StaticResource PrimaryButton}" MinWidth="90" Click="Save_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
