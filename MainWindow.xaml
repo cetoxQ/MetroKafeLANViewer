@@ -55,9 +55,21 @@
             <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
         </Style>
 
+        <!-- Bölme boyutlandırılırken görünen 20 px ızgara -->
+        <DrawingBrush x:Key="GridBrush" TileMode="Tile" Viewport="0,0,20,20" ViewportUnits="Absolute" Viewbox="0,0,20,20" ViewboxUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <GeometryDrawing Geometry="M0,0 L20,0 M0,0 L0,20">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#2A3A5A" Thickness="1"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+
         <!-- Alt kısımdaki bölme: başlık (simge, ad, sayı), kutular, sağ altta boyut tutamağı -->
         <DataTemplate x:Key="GroupTemplate">
             <Border Width="{Binding Width}" Height="{Binding Height}" Margin="0,0,10,10" CornerRadius="8"
+                    HorizontalAlignment="Left" VerticalAlignment="Top"
                     Background="{StaticResource PanelBrush}" AllowDrop="True"
                     DragEnter="Group_DragOver" DragOver="Group_DragOver" DragLeave="Group_DragLeave" Drop="Group_Drop">
                 <Border.Style>
@@ -75,6 +87,8 @@
                 <Grid>
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top" Margin="10,6,6,2">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8A9;"
+                                    ToolTip="Öteki bölmeleri bu bölmenin boyutuna getir" Click="GroupSameSize_Click"/>
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding ButtonsVisibility}">
                                 <Button Style="{StaticResource IconButton}" Content="&#xE70F;" ToolTip="Adını / simgesini değiştir" Click="GroupEdit_Click"/>
                                 <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Bölmeyi sil (içindekiler Diğer cihazlar'a döner)" Click="GroupDelete_Click"/>
@@ -94,7 +108,7 @@
                         </ScrollViewer>
                     </DockPanel>
                     <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="16" Height="16" Cursor="SizeNWSE"
-                           ToolTip="Boyutu değiştirmek için sürükleyin" DragDelta="Group_Resize" DragCompleted="Group_ResizeDone">
+                           ToolTip="Boyutu değiştirmek için sürükleyin (20 piksellik ızgaraya oturur)" DragStarted="Group_ResizeStart" DragDelta="Group_Resize" DragCompleted="Group_ResizeDone">
                         <Thumb.Template>
                             <ControlTemplate TargetType="Thumb">
                                 <Grid Background="Transparent">

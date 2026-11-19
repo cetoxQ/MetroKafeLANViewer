@@ -1,4 +1,4 @@
-#if DEBUG
+﻿#if DEBUG
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -36,6 +36,7 @@ static class DebugSnapshot
         foreach (double scale in new[] { 1.0, 0.7 })
         {
             w.DebugScale(scale);
+            if (scale < 1) w.DebugGridAndEqualize();
             for (int i = 0; i < 5; i++)
             {
                 w.UpdateLayout();

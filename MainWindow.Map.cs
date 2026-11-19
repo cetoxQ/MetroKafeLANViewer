@@ -102,9 +102,10 @@ public partial class MainWindow
     void BuildGroups()
     {
         _groups.Clear();
-        _groups.Add(new GroupView { Width = _settings.OtherWidth, Height = _settings.OtherHeight });
+        // Eski sürümlerde ızgarasız kaydedilmiş boyutlar da ızgaraya oturtulur
+        _groups.Add(new GroupView { Width = Snap(_settings.OtherWidth, 230), Height = Snap(_settings.OtherHeight, 110) });
         foreach (var def in _settings.Groups)
-            _groups.Add(new GroupView { Def = def, Width = def.Width, Height = def.Height });
+            _groups.Add(new GroupView { Def = def, Width = Snap(def.Width, 230), Height = Snap(def.Height, 110) });
         FillGroups();
     }
 
@@ -179,27 +180,81 @@ public partial class MainWindow
         BuildGroups();
     }
 
+    /// <summary>Bölme boyutları bu ızgaraya oturur; aradaki 10 px boşluk dahil edildiği için kenarlar alt alta hizalanır.</summary>
+    const double GridStep = 20, GroupGap = 10;
+
+    static double Snap(double v, double min) =>
+        Math.Max(min, Math.Round((v + GroupGap) / GridStep) * GridStep - GroupGap);
+
+    void Group_ResizeStart(object sender, DragStartedEventArgs e)
+    {
+        GroupsView.Background = (Brush)FindResource("GridBrush");
+        if (GroupOf(sender) is { } g) ShowSizeHint(g);
+    }
+
     void Group_Resize(object sender, DragDeltaEventArgs e)
     {
+        // Tutamak kenarla birlikte yer değiştirdiği için değişim, farenin şu anki kenara uzaklığıdır
         if (GroupOf(sender) is not { } g) return;
-        g.Width = Math.Max(220, g.Width + e.HorizontalChange);
-        g.Height = Math.Max(110, g.Height + e.VerticalChange);
+        g.Width = Snap(g.Width + e.HorizontalChange, 230);
+        g.Height = Snap(g.Height + e.VerticalChange, 110);
+        ShowSizeHint(g);
     }
 
     void Group_ResizeDone(object sender, DragCompletedEventArgs e)
     {
+        GroupsView.Background = null;
+        UpdateSelectionText();
         if (GroupOf(sender) is not { } g) return;
+        SaveGroupSize(g);
+        Store.SaveSettings(_settings);
+    }
+
+    void ShowSizeHint(GroupView g) =>
+        SelectionText.Text = $"{g.Name}: {g.Width:0} × {g.Height:0}";
+
+    void SaveGroupSize(GroupView g)
+    {
         if (g.Def is { } def)
         {
-            def.Width = Math.Round(g.Width);
-            def.Height = Math.Round(g.Height);
+            def.Width = g.Width;
+            def.Height = g.Height;
         }
         else
         {
-            _settings.OtherWidth = Math.Round(g.Width);
-            _settings.OtherHeight = Math.Round(g.Height);
+            _settings.OtherWidth = g.Width;
+            _settings.OtherHeight = g.Height;
+        }
+    }
+
+    void ResizeGroups(GroupView src, Func<GroupView, bool> which, bool width, bool height)
+    {
+        foreach (var g in _groups.Where(which))
+        {
+            if (width) g.Width = src.Width;
+            if (height) g.Height = src.Height;
+            SaveGroupSize(g);
         }
         Store.SaveSettings(_settings);
+    }
+
+    void GroupSameSize_Click(object sender, RoutedEventArgs e)
+    {
+        if (GroupOf(sender) is not { } src) return;
+        bool others = src.Def == null;
+        var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = PlacementMode.Bottom };
+        void Add(string text, Func<GroupView, bool> which, bool width, bool height)
+        {
+            var item = new MenuItem { Header = text };
+            item.Click += (_, _) => ResizeGroups(src, which, width, height);
+            menu.Items.Add(item);
+        }
+        Add($"Tüm bölmeleri bu boyuta getir ({src.Width:0} × {src.Height:0})", _ => true, true, true);
+        if (!others)
+            Add("Eklenen bölmeleri bu boyuta getir (Diğer cihazlar hariç)", g => g.Def != null, true, true);
+        Add($"Yalnız genişlikleri eşitle ({src.Width:0})", _ => true, true, false);
+        Add($"Yalnız yükseklikleri eşitle ({src.Height:0})", _ => true, false, true);
+        menu.IsOpen = true;
     }
 
     void Group_DragOver(object sender, DragEventArgs e)
@@ -473,6 +528,14 @@ public partial class MainWindow
         ScaleSlider.Value = v;
         UpdateLayout();
         MapPanel.ScrollToEnd();
+    }
+
+    /// <summary>Yalnızca Debug: ızgarayı gösterir ve eklenen bölmeleri ilkinin boyutuna getirir (ayarlara yazmaz).</summary>
+    public void DebugGridAndEqualize()
+    {
+        GroupsView.Background = (Brush)FindResource("GridBrush");
+        if (_groups.Count > 1)
+            foreach (var g in _groups.Skip(2)) { g.Width = _groups[1].Width; g.Height = _groups[1].Height; }
     }
 
     /// <summary>Yalnızca Debug: ekran görüntüsü testinde seçim görünümü için.</summary>

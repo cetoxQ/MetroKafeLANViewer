@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
     <!-- yayinla.bat her yayında artırır; program GitHub'daki son sürümle bu numarayı karşılaştırır. -->
-    <Version>1.0.4</Version>
+    <Version>1.0.5</Version>
   </PropertyGroup>
 </Project>

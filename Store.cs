@@ -32,7 +32,7 @@ public sealed class AppSettings
     /// <summary>Haritanın altındaki kullanıcı bölmeleri (sunucular, modemler, aralık dışı istemciler...).</summary>
     public List<GroupDef> Groups { get; set; } = [];
     /// <summary>Bölmesi olmayan cihazların durduğu "Diğer cihazlar" bölmesinin boyutu.</summary>
-    public double OtherWidth { get; set; } = 760;
+    public double OtherWidth { get; set; } = 790;
     public double OtherHeight { get; set; } = 230;
 }
 
@@ -42,8 +42,8 @@ public sealed class GroupDef
     public string Name { get; set; } = "Yeni bölme";
     /// <summary>Simge anahtarı: <see cref="Icons.ByKey"/>.</summary>
     public string Icon { get; set; } = "Klasor";
-    public double Width { get; set; } = 380;
-    public double Height { get; set; } = 180;
+    public double Width { get; set; } = 390;
+    public double Height { get; set; } = 190;
 }
 
 /// <summary>Cihaz kayıtları: cihazlar ve her istemci IP'sinde en son görülen istemci.</summary>
