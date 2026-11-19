@@ -34,6 +34,8 @@ public sealed class AppSettings
     /// <summary>Bölmesi olmayan cihazların durduğu "Diğer cihazlar" bölmesinin boyutu.</summary>
     public double OtherWidth { get; set; } = 790;
     public double OtherHeight { get; set; } = 230;
+    /// <summary>"Diğer cihazlar" bölmesinin bölmeler arasındaki sırası.</summary>
+    public int OtherIndex { get; set; }
 }
 
 public sealed class GroupDef

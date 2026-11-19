@@ -14,12 +14,14 @@ namespace MetroKafeLANViewer;
 public partial class MainWindow
 {
     const string DragFormat = "MetroKafeLANViewer.Cihazlar";
+    const string GroupFormat = "MetroKafeLANViewer.Bolme";
 
     /// <summary>Seçili cihazların anahtarları (aynı cihaz hem istemci ızgarasında hem bölmede görünebilir).</summary>
     readonly HashSet<string> _selected = new(StringComparer.OrdinalIgnoreCase);
     string? _anchorKey;
     (Tile Tile, Point At)? _press;
     Point? _bandStart;
+    (GroupView Group, Point At)? _groupPress;
     bool _bandAdditive, _suppressInterval;
     DispatcherTimer? _scaleSave;
 
@@ -103,9 +105,10 @@ public partial class MainWindow
     {
         _groups.Clear();
         // Eski sürümlerde ızgarasız kaydedilmiş boyutlar da ızgaraya oturtulur
-        _groups.Add(new GroupView { Width = Snap(_settings.OtherWidth, 230), Height = Snap(_settings.OtherHeight, 110) });
         foreach (var def in _settings.Groups)
             _groups.Add(new GroupView { Def = def, Width = Snap(def.Width, 230), Height = Snap(def.Height, 110) });
+        _groups.Insert(Math.Clamp(_settings.OtherIndex, 0, _groups.Count),
+            new GroupView { Width = Snap(_settings.OtherWidth, 230), Height = Snap(_settings.OtherHeight, 110) });
         FillGroups();
     }
 
@@ -117,7 +120,7 @@ public partial class MainWindow
     {
         if (_groups.Count == 0) return;
         var byId = _groups.Where(g => g.Id != null).ToDictionary(g => g.Id!);
-        var other = _groups[0];
+        var other = _groups.First(g => g.Def == null);
         foreach (var g in _groups) g.Tiles.Clear();
         foreach (var d in _monitor.Devices.Where(d => d.IpNum != 0).OrderBy(d => d.IpNum))
         {
@@ -203,7 +206,7 @@ public partial class MainWindow
 
     void Group_ResizeDone(object sender, DragCompletedEventArgs e)
     {
-        GroupsView.Background = null;
+        GroupsView.Background = Brushes.Transparent;
         UpdateSelectionText();
         if (GroupOf(sender) is not { } g) return;
         SaveGroupSize(g);
@@ -257,8 +260,86 @@ public partial class MainWindow
         menu.IsOpen = true;
     }
 
+    // ---------------------------------------------------------------- bölmelerin yerini değiştirme
+
+    void GroupHeader_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (IsControl(e.OriginalSource as DependencyObject) || GroupOf(sender) is not { } g) return;
+        _groupPress = (g, e.GetPosition(MapContent));
+        MapContent.CaptureMouse();
+        e.Handled = true;
+    }
+
+    void StartGroupDrag(GroupView g)
+    {
+        try
+        {
+            DragDrop.DoDragDrop(MapContent, new DataObject(GroupFormat, g.Id ?? ""), DragDropEffects.Move);
+        }
+        finally
+        {
+            ClearInsertMarks();
+        }
+    }
+
+    void ClearInsertMarks()
+    {
+        foreach (var g in _groups)
+        {
+            g.InsertSide = 0;
+            g.DropTarget = false;
+        }
+    }
+
+    GroupView? DraggedGroup(DragEventArgs e) =>
+        e.Data.GetData(GroupFormat) is string id ? _groups.FirstOrDefault(g => (g.Id ?? "") == id) : null;
+
+    /// <summary>Fare bölmenin sol yarısındaysa önüne (-1), sağ yarısındaysa arkasına (1).</summary>
+    static int SideOf(DragEventArgs e, object sender) =>
+        sender is FrameworkElement fe && e.GetPosition(fe).X < fe.ActualWidth / 2 ? -1 : 1;
+
+    void MoveGroup(GroupView g, int index)
+    {
+        int from = _groups.IndexOf(g);
+        if (from < index) index--;
+        index = Math.Clamp(index, 0, _groups.Count - 1);
+        if (from == index) return;
+        _groups.Move(from, index);
+        _settings.Groups = [.. _groups.Where(x => x.Def != null).Select(x => x.Def!)];
+        _settings.OtherIndex = _groups.IndexOf(_groups.First(x => x.Def == null));
+        Store.SaveSettings(_settings);
+    }
+
+    // Bölmelerin dışındaki boş yere bırakılırsa en sona taşınır
+    void Groups_DragOver(object sender, DragEventArgs e)
+    {
+        if (DraggedGroup(e) is null) return;
+        e.Effects = DragDropEffects.Move;
+        ClearInsertMarks();
+        if (_groups.Count > 0) _groups[^1].InsertSide = 1;
+        e.Handled = true;
+    }
+
+    void Groups_DragLeave(object sender, DragEventArgs e) => ClearInsertMarks();
+
+    void Groups_Drop(object sender, DragEventArgs e)
+    {
+        ClearInsertMarks();
+        if (DraggedGroup(e) is not { } g) return;
+        MoveGroup(g, _groups.Count);
+        e.Handled = true;
+    }
+
     void Group_DragOver(object sender, DragEventArgs e)
     {
+        if (DraggedGroup(e) is { } dragged)
+        {
+            e.Effects = DragDropEffects.Move;
+            ClearInsertMarks();
+            if (GroupOf(sender) is { } over && over != dragged) over.InsertSide = SideOf(e, sender);
+            e.Handled = true;
+            return;
+        }
         bool ok = e.Data.GetDataPresent(DragFormat);
         e.Effects = ok ? DragDropEffects.Move : DragDropEffects.None;
         if (ok && GroupOf(sender) is { } g)
@@ -270,12 +351,21 @@ public partial class MainWindow
 
     void Group_DragLeave(object sender, DragEventArgs e)
     {
-        if (GroupOf(sender) is { } g) g.DropTarget = false;
+        if (GroupOf(sender) is not { } g) return;
+        g.DropTarget = false;
+        g.InsertSide = 0;
     }
 
     void Group_Drop(object sender, DragEventArgs e)
     {
-        foreach (var g in _groups) g.DropTarget = false;
+        ClearInsertMarks();
+        if (DraggedGroup(e) is { } dragged)
+        {
+            if (GroupOf(sender) is { } over && over != dragged)
+                MoveGroup(dragged, _groups.IndexOf(over) + (SideOf(e, sender) > 0 ? 1 : 0));
+            e.Handled = true;
+            return;
+        }
         if (GroupOf(sender) is not { } target || e.Data.GetData(DragFormat) is not string[] keys) return;
         var set = keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         MoveToGroup(_monitor.Devices.Where(d => set.Contains(d.Key)).ToList(), target.Id);
@@ -424,7 +514,7 @@ public partial class MainWindow
 
     void Map_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (_press != null || IsControl(e.OriginalSource as DependencyObject)) return;
+        if (_press != null || _groupPress != null || IsControl(e.OriginalSource as DependencyObject)) return;
         _bandStart = e.GetPosition(MapContent);
         _bandAdditive = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
         Canvas.SetLeft(SelectRect, _bandStart.Value.X);
@@ -437,6 +527,20 @@ public partial class MainWindow
     void Map_MouseMove(object sender, MouseEventArgs e)
     {
         var pos = e.GetPosition(MapContent);
+        if (_groupPress is { } gp)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                _groupPress = null;
+                MapContent.ReleaseMouseCapture();
+                return;
+            }
+            if ((pos - gp.At).Length < 6) return;
+            _groupPress = null;
+            MapContent.ReleaseMouseCapture();
+            StartGroupDrag(gp.Group);
+            return;
+        }
         if (_press is { } p)
         {
             if (e.LeftButton != MouseButtonState.Pressed)
@@ -463,6 +567,12 @@ public partial class MainWindow
 
     void Map_MouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (_groupPress != null)
+        {
+            _groupPress = null;
+            MapContent.ReleaseMouseCapture();
+            return;
+        }
         if (_press is { } p)
         {
             _press = null;
@@ -536,6 +646,9 @@ public partial class MainWindow
         GroupsView.Background = (Brush)FindResource("GridBrush");
         if (_groups.Count > 1)
             foreach (var g in _groups.Skip(2)) { g.Width = _groups[1].Width; g.Height = _groups[1].Height; }
+        // Diğer cihazlar en sona alınır (kaydedilir), ilk bölmede "önüne bırak" işareti gösterilir
+        MoveGroup(_groups.First(g => g.Def == null), _groups.Count);
+        _groups[0].InsertSide = 1;
     }
 
     /// <summary>Yalnızca Debug: ekran görüntüsü testinde seçim görünümü için.</summary>

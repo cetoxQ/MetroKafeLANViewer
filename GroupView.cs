@@ -46,8 +46,25 @@ public sealed class GroupView : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Bölme sürüklenirken bırakılacağı yer: bu bölmenin önü (-1), arkası (1) ya da hiçbiri (0).</summary>
+    public int InsertSide
+    {
+        get => _side;
+        set
+        {
+            if (_side == value) return;
+            _side = value;
+            Changed(nameof(BeforeMark));
+            Changed(nameof(AfterMark));
+        }
+    }
+
+    public Visibility BeforeMark => _side < 0 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility AfterMark => _side > 0 ? Visibility.Visible : Visibility.Collapsed;
+
     double _width, _height;
     bool _drop;
+    int _side;
 
     public void RefreshTitle() => Changed(nameof(Title));
 

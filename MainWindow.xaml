@@ -86,7 +86,9 @@
                 </Border.Style>
                 <Grid>
                     <DockPanel>
-                        <DockPanel DockPanel.Dock="Top" Margin="10,6,6,2">
+                        <DockPanel DockPanel.Dock="Top" Margin="10,6,6,2" Background="Transparent" Cursor="SizeAll"
+                                   ToolTip="Bölmenin yerini değiştirmek için başlıktan tutup sürükleyin"
+                                   MouseLeftButtonDown="GroupHeader_MouseDown">
                             <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8A9;"
                                     ToolTip="Öteki bölmeleri bu bölmenin boyutuna getir" Click="GroupSameSize_Click"/>
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding ButtonsVisibility}">
@@ -107,6 +109,10 @@
                             <ItemsControl ItemsSource="{Binding Tiles}" ItemTemplate="{StaticResource TileTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
                         </ScrollViewer>
                     </DockPanel>
+                    <Rectangle HorizontalAlignment="Left" Width="4" Margin="-8,0,0,0" RadiusX="2" RadiusY="2"
+                               Fill="{StaticResource AccentBrush}" Visibility="{Binding BeforeMark}" IsHitTestVisible="False"/>
+                    <Rectangle HorizontalAlignment="Right" Width="4" Margin="0,0,-8,0" RadiusX="2" RadiusY="2"
+                               Fill="{StaticResource AccentBrush}" Visibility="{Binding AfterMark}" IsHitTestVisible="False"/>
                     <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="16" Height="16" Cursor="SizeNWSE"
                            ToolTip="Boyutu değiştirmek için sürükleyin (20 piksellik ızgaraya oturur)" DragStarted="Group_ResizeStart" DragDelta="Group_Resize" DragCompleted="Group_ResizeDone">
                         <Thumb.Template>
@@ -225,7 +231,8 @@
                     </StackPanel>
                 </DockPanel>
                 <WrapPanel x:Name="IconLegend" Margin="3,2,3,8"/>
-                <ItemsControl x:Name="GroupsView" ItemTemplate="{StaticResource GroupTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"/>
+                <ItemsControl x:Name="GroupsView" ItemTemplate="{StaticResource GroupTemplate}" ItemsPanel="{StaticResource WrapPanelTemplate}"
+                              Background="Transparent" AllowDrop="True" DragOver="Groups_DragOver" Drop="Groups_Drop" DragLeave="Groups_DragLeave"/>
             </StackPanel>
                 <Canvas IsHitTestVisible="False">
                     <Rectangle x:Name="SelectRect" Visibility="Collapsed" Stroke="#3B82F6" StrokeThickness="1" Fill="#333B82F6"/>
