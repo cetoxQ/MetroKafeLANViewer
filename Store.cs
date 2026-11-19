@@ -132,7 +132,8 @@ public static class Store
         try
         {
             Directory.CreateDirectory(LogFolder);
-            File.AppendAllText(Path.Combine(LogFolder, $"{e.Time:yyyy-MM-dd}.txt"), $"{e.Time:HH:mm:ss}\t{e.LevelText}\t{e.Text}\r\n");
+            // UTF8Encoding(true): yeni dosyanın başına BOM yazılır, Not Defteri Türkçe karakterleri doğru gösterir
+            File.AppendAllText(Path.Combine(LogFolder, $"{e.Time:yyyy-MM-dd}.txt"), $"{e.Time:HH:mm:ss}\t{e.LevelText}\t{e.Text}\r\n", new UTF8Encoding(true));
         }
         catch { }
     }
