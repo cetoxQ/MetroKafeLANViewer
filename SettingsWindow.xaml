@@ -41,6 +41,8 @@
         <TextBlock Text="GitHub anahtarı (depo gizliyken gerekir)" Style="{StaticResource FieldLabel}"/>
         <DockPanel>
             <Button DockPanel.Dock="Right" Content="Şimdi denetle" Margin="8,0,0,0" Click="Check_Click"/>
+            <Button DockPanel.Dock="Right" Content="Anahtar al" Margin="8,0,0,0" Click="GetToken_Click"
+                    ToolTip="GitHub'da anahtar oluşturma sayfasını açar"/>
             <PasswordBox x:Name="TokenBox"/>
         </DockPanel>
         <TextBlock x:Name="TokenHint" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>

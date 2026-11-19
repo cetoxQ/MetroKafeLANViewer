@@ -291,7 +291,8 @@
         <!-- Durum çubuğu -->
         <Border Grid.Row="4" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,6">
             <DockPanel>
-                <TextBlock x:Name="VersionText" DockPanel.Dock="Left" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,24,0"/>
+                <TextBlock x:Name="VersionText" DockPanel.Dock="Left" Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,0,24,0"
+                           Cursor="Hand" ToolTip="Güncellemeyi şimdi denetle" MouseLeftButtonUp="VersionText_Click"/>
                 <TextBlock x:Name="ScanStatus" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
                 <TextBlock x:Name="Summary" FontSize="12"/>
             </DockPanel>

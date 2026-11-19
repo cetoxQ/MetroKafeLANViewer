@@ -33,7 +33,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        VersionText.Text = $"Sürüm: v{Updater.CurrentVersion.ToString(3)}";
+        SetUpdateStatus(_settings.CheckUpdates ? "denetleniyor..." : "otomatik denetim kapalı", false);
 
         _view = CollectionViewSource.GetDefaultView(_monitor.Devices);
         _view.Filter = Matches;
@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(() => StartScan(), DispatcherPriority.ApplicationIdle);
         if (_settings.CheckUpdates)
         {
-            var first = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+            var first = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             first.Tick += async (_, _) => { first.Stop(); await CheckUpdateAsync(silent: true); };
             first.Start();
             _updateTimer.Start();
@@ -503,13 +503,32 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Alt çubuktaki "Sürüm: v1.0.3 · güncel" yazısı; sorun varsa turuncu.</summary>
+    void SetUpdateStatus(string status, bool warning)
+    {
+        VersionText.Text = $"Sürüm: v{Updater.CurrentVersion.ToString(3)} · {status}";
+        VersionText.Foreground = (System.Windows.Media.Brush)FindResource(warning ? "WarnBrush" : "MutedBrush");
+    }
+
+    async void VersionText_Click(object sender, MouseButtonEventArgs e)
+    {
+        // Anahtar eksikse doğrudan ayarlara götürülür
+        if (_settings.Token == null && _updateError != null) Settings_Click(this, new RoutedEventArgs());
+        else await CheckUpdateAsync(silent: false);
+    }
+
+    string? _updateError;
+
     async Task CheckUpdateAsync(bool silent)
     {
+        SetUpdateStatus("denetleniyor...", false);
         try
         {
             _update = await Updater.CheckAsync(_settings);
+            _updateError = null;
             if (_update == null)
             {
+                SetUpdateStatus($"güncel ({DateTime.Now:HH:mm})", false);
                 UpdateBanner.Visibility = Visibility.Collapsed;
                 if (!silent) MessageBox.Show(this, $"Program güncel (v{Updater.CurrentVersion.ToString(3)}).", "Güncelleme", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
@@ -518,15 +537,17 @@ public partial class MainWindow : Window
                 + (string.IsNullOrWhiteSpace(_update.Notes) ? "" : " — " + _update.Notes.Trim().Replace("\r", "").Replace("\n", " · "));
             UpdateButton.IsEnabled = true;
             UpdateBanner.Visibility = Visibility.Visible;
+            SetUpdateStatus($"yeni sürüm var: v{_update.Latest.ToString(3)}", true);
             if (silent && !IsVisible) _tray.Notify("Yeni sürüm hazır", $"Metro Kafe LAN Viewer v{_update.Latest.ToString(3)}");
             if (!silent) UpdateNow_Click(this, new RoutedEventArgs());
         }
-        catch (UpdateException ex)
-        {
-            if (!silent) MessageBox.Show(this, ex.Message, "Güncelleme", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
         catch (Exception ex)
         {
+            _updateError = ex.Message;
+            SetUpdateStatus(_settings.Token == null
+                ? "güncelleme denetlenemedi: GitHub anahtarı gerekli (tıklayın)"
+                : "güncelleme denetlenemedi (tıklayın)", true);
+            VersionText.ToolTip = ex.Message;
             if (!silent) MessageBox.Show(this, ex.Message, "Güncelleme", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

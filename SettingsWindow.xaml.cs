@@ -30,7 +30,8 @@ public partial class SettingsWindow : Window
         UpdateBox.IsChecked = s.CheckUpdates;
         TokenHint.Text = s.Token != null
             ? "Anahtar girilmiş. Değiştirmek için yenisini yazın; silmek için \"-\" yazın."
-            : $"Depo: {s.Repo}. Depo herkese açıksa boş bırakın.";
+            : $"Depo: {s.Repo}. \"Anahtar al\" → Repository access: Only select repositories → {s.Repo.Split('/')[^1]}, "
+              + "Permissions → Contents: Read-only → Generate token. Çıkan anahtarı buraya yapıştırın. Depo herkese açılınca gerekmez.";
         FolderText.Text = "Kayıtlar: " + Store.Folder;
         FolderText.ToolTip = Store.Folder;
     }
@@ -84,6 +85,15 @@ public partial class SettingsWindow : Window
         catch { }
         Result = s;
         DialogResult = true;
+    }
+
+    void GetToken_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/settings/personal-access-tokens/new") { UseShellExecute = true });
+        }
+        catch { }
     }
 
     void Check_Click(object sender, RoutedEventArgs e)
